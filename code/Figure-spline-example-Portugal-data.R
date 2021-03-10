@@ -17,8 +17,8 @@ rm(list=ls())
 
 theme_carl <- function () { 
   theme_bw() %+replace% 
-    theme(axis.text = element_text(size=16, face='bold',color='black'),
-          axis.title = element_text(size=16, face='bold'))
+    theme(axis.text = element_text(size=14, face='bold',color='black'),
+          axis.title = element_text(size=14, face='bold'))
 }
 
 
@@ -83,8 +83,8 @@ GA = ggplot(data=basis_df) +
   theme_carl() +
   guides(color=FALSE) +
   scale_color_manual(values=rep(my_colors,9)) +
-  geom_text(aes(x=6,y=0.94), label='A. B-spline basis functions', fontface='bold',
-            color='red',size=6, hjust=0) 
+  geom_text(aes(x=6,y=0.94), label='A.', fontface='bold',
+            color='black',size=6, hjust=0) 
 
 
 GA
@@ -97,9 +97,10 @@ GA
 GB = ggplot() +
       geom_point(aes(x=xcoarse, y=logmx), shape=1, size=1) +
       theme_carl() +
+      scale_y_continuous(limits=c(-10,0), breaks=seq(-10,0,2)) +
       labs(x='x', y='Log Mortality Rate') +
-      geom_text(aes(x=5,y=-1), label='B. Mortality Rates', 
-                fontface='bold',color='red',size=6, hjust=0)
+      geom_text(aes(x=5,y=-1), label='B.', 
+                fontface='bold',color='black',size=6, hjust=0)
 
 GB
 
@@ -117,24 +118,24 @@ piecewise_df = tibble(x    = xfine,
 piecewise_df$xcat[length(xfine)] = piecewise_df$xcat[length(xfine)-1]
 
 piecewise_df = piecewise_df %>% 
-  mutate( hue  = my_colors[1 + as.integer(xcat) %%2],
-          width= ifelse(hue==my_colors[1],2,0.6)
+  mutate( hue  = 'navy',
+          width= ifelse(hue==my_colors[1],0.6,0.6)
   )
 
 GC = ggplot() +
   geom_point(aes(x=xcoarse, y=logmx), shape=1, size=1) +
   theme_carl() +
   labs(x='x', y='Log Mortality Rate') +
-  scale_y_continuous(limits=c(-10,-1), breaks=seq(-10,0,2)) +
-  geom_vline(xintercept = seq(0,12,3), color='lightgrey') +
-  geom_text(aes(x=5,y=-1.2), label='C. Spline Approximation', fontface='bold',
-            color='red',size=6,hjust=0) 
+  scale_y_continuous(limits=c(-10,0), breaks=seq(-10,0,2)) +
+  geom_vline(xintercept = seq(0,99,3), color='lightgrey') +
+  geom_text(aes(x=5,y=-1.2), label='C.', fontface='bold',
+            color='black',size=6,hjust=0) 
 
 GC = GC + 
   geom_line(data=piecewise_df, 
             aes(x=x,y=y),
             color=piecewise_df$hue, 
-            size=piecewise_df$width) 
+            size=piecewise_df$width)
 
 GC
 
@@ -148,7 +149,7 @@ nseg = 4
 xnew = seq(0,3*(nseg+1),.10)
 
 this_linetype  = c('solid','dashed','dotted','solid')
-this_linewidth = c(6, 4, 6, 4)
+this_linewidth = c(6, 3, 6, 3)
 
 tmp = NULL
 
@@ -179,18 +180,17 @@ clean_df = tmp %>%
             filter( !(seg==3 & x <1.4))
 
 GD = ggplot(data=clean_df) + 
-  aes(x=x,y=y) + 
-  geom_line(size=0.8,aes(group=seg,lty=linetype, color=linecolor)) +
+  geom_line(size=0.8,aes(x=x,y=y,group=seg,lty=linetype, color=linecolor)) +
   theme_carl() +
   labs(x='x',y='Log Mortality Rate') +
   scale_x_continuous(breaks=seq(0,15,3),minor_breaks = NULL) +
   guides(color=FALSE, lty=FALSE) +
-  geom_text(aes(x=1,y=-1.2), label='D. 4 cubic pieces for [0,12]', fontface='bold',
-            color='red',size=6, hjust=0) +
+  geom_text(aes(x=1,y=-1.2), label='D.', fontface='bold',
+            color='black',size=6, hjust=0) +
   scale_color_identity() +
   scale_linetype_identity() +
   theme(panel.grid.major.x = element_line(color = grey(.25)))  +
-  scale_y_continuous(limits=c(-10,-1), breaks=seq(-10,0,2))
+  scale_y_continuous(limits=c(-10,0), breaks=seq(-10,0,2))
 
 
 for (this_seg in 1:nseg) {
@@ -198,10 +198,29 @@ for (this_seg in 1:nseg) {
   this_linewidth = tmp$linewidth[1]
   GD = GD + 
     geom_line(data=tmp, 
-              aes(group=seg,color=linecolor),
+              aes(x=x,y=y,group=seg,color=linecolor),
               size=this_linewidth, alpha=.70)
 }
 
+## this is a ridiculous way to add points, but ggplot is
+## extremely finicky with the aes() othewise
+
+GD = GD +
+  geom_point(aes(x=  0, y=logmx[1])) +
+  geom_point(aes(x=  1, y=logmx[2])) +
+  geom_point(aes(x=  2, y=logmx[3])) +
+  geom_point(aes(x=  3, y=logmx[4])) +
+  geom_point(aes(x=  4, y=logmx[5])) +
+  geom_point(aes(x=  5, y=logmx[6])) +
+  geom_point(aes(x=  6, y=logmx[7])) +
+  geom_point(aes(x=  7, y=logmx[8])) +
+  geom_point(aes(x=  8, y=logmx[9])) +
+  geom_point(aes(x=  9, y=logmx[10])) +
+  geom_point(aes(x= 10, y=logmx[11])) +
+  geom_point(aes(x= 11, y=logmx[12])) +
+  geom_point(aes(x= 12, y=logmx[13])) 
+  
+  
 GD
 
 
