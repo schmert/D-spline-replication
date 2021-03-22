@@ -20,6 +20,9 @@
 #     that will be used by other programs    
 ############################################################
 
+## RUN THIS PROGRAM WITH THE code/ directory (where this script lives)
+## AS THE WORKING DIRECTORY
+
 library(R.utils)
 
 my_HMD_username = '...insert your HMD username here...'
