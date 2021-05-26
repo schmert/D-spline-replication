@@ -164,7 +164,7 @@ make_sample_D = function(ix,N) {
 
 
 #' all estimators will maximize
-#'    L(theta) -1/2 (A S theta - c)' V (A S theta - c)
+#'    L(theta) -1/2 (A B theta - c)' Vinv (A B theta - c)
 #' over theta   
 #' for 1st diffs -- A = D1 , c = mean 1st diffs,
 #' for 2nd diffs -- A = D2 , c = mean 2nd diffs 

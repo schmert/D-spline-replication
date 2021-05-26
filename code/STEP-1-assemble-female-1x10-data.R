@@ -101,26 +101,26 @@ for (j in colnames(HMD_logmx)) {
 # There are 3 D-spline models to test, each with a different
 # set of residuals. The cubic spline model will always be 
 #      log mortality at ages 0..99 = S * theta
-# where S is a cubic B-spline matrix with lots of knots.
+# where B is a cubic B-spline matrix with lots of knots.
 #
 # Residual measures are
-#   1. (1st diffs of S * theta) - (HMD avg 1st diffs) 
-#   2. (2nd diffs of S * theta) - (HMD avg 2nd diffs) 
-#   3. (projection residuals of [S * theta - Lee-Carter a] on
+#   1. (1st diffs of B * theta) - (HMD avg 1st diffs) 
+#   2. (2nd diffs of B * theta) - (HMD avg 2nd diffs) 
+#   3. (projection residuals of [B * theta - Lee-Carter a] on
 #           [Lee-Carter b]
 #
 # That is, the 3rd model should reward splines 
 # that are Lee-Carter-ish 
 #
 # For all 3 measures the residuals have the form
-#       eps = A*S*theta - c
+#       eps = A*B*theta - c
 # with difft A matrices and c vectors
 #
 # 1. A = 99x100 1st-diff matrix,  c = 99x1 HMD avg 1st diffs
 # 2. A = 98x100 2nd-diff matrix,  c = 98x1 HMD avg 2nd diffs
 # 3. A = 100x100 residual proj matrix M=(I-bb') using LC "b" vector,
 #    c = 100x1 M * a 
-#    This comes from M(S*theta-a) = 0 in an exact LC model
+#    This comes from M(B*theta-a) = 0 in an exact LC model
 ##################################################################
 
 # construct a list with A,c,etc

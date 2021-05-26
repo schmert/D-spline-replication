@@ -28,7 +28,7 @@ library(R.utils)
 my_HMD_username = '...insert your HMD username here...'
 my_HMD_password = '...insert your HMD password here...'
 
-HMDfile='https://www.mortality.org/hmd/REPLICATION/schmertmann_replication_testfile.zip'
+HMDfile='https://www.mortality.org/hmd/REPLICATION/Schmertmann_2021_Demog_Res_44-45_data.zip'
 
 downloadFile(url=HMDfile, 
              filename='tmp.zip',
