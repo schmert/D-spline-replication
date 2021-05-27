@@ -3,10 +3,11 @@
 # from the big cross-validated experiment
 # 
 # NOTE: 
-# 1. this program may take a LONG time to run
-# 2. you MUST replace the value of time_stamp below with
+#    you MUST replace the value of time_stamp below with
 #    the appropriate name for the file that YOU created
-#    in STEP-2. It will look like YYYY-MM-DD-HHMM.
+#    in STEP-2. It will look like YYYY-MM-DD-HHMM,
+#    and the associated files will be in the ../data/
+#    directory after STEP-2 is complete.
 ----------------------------------------------
 library(tidyverse)
 

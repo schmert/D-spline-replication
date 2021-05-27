@@ -17,6 +17,9 @@
 #     BIG-cross-validated-HMD-test-2021-02-01-1308-part-1.Rdata
 #     BIG-cross-validated-HMD-test-2021-02-01-1308-part-2.Rdata
 #     BIG-cross-validated-HMD-test-2021-02-01-1308-part-3.Rdata
+#
+# This program may take a long time to run: on a standard
+# desktop PC (circa 2020) the run time was nearly 1 hour
 #---------------------------------------------------------------
 
 library(MASS)
