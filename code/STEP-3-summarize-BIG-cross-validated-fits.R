@@ -1,6 +1,13 @@
+#----------------------------------------------
 # Examine the Mort1DSmooth (and other) fits 
 # from the big cross-validated experiment
-
+# 
+# NOTE: 
+# 1. this program may take a LONG time to run
+# 2. you MUST replace the value of time_stamp below with
+#    the appropriate name for the file that YOU created
+#    in STEP-2. It will look like YYYY-MM-DD-HHMM.
+----------------------------------------------
 library(tidyverse)
 
 rm(list=ls())
@@ -10,7 +17,7 @@ rm(list=ls())
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 nparts = 3
-time_stamp = '2020-07-26-1925'
+time_stamp = '...your time stamp goes here...' # formatted like: 2020-07-26-1925  
 
 fname = paste0('../data/BIG-cross-validated-HMD-test-',
                time_stamp,'-part-1.Rdata')
