@@ -5,3 +5,6 @@ CP Schmertmann, 2021. "D-splines: Estimating rate schedules using high-dimension
 
 http://www.demographic-research.org/Volumes/Vol44/45/ 
 
+The Human Mortality Database (HMD) files used in the analysis are hosted in a replication repository on the HMD site, at 
+https://www.mortality.org/hmd/REPLICATION/Schmertmann_2021_Demog_Res_44-45_data.zip. Access to those files requires (free) registration. 
+
