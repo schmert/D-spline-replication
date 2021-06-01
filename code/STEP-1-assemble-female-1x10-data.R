@@ -100,7 +100,7 @@ for (j in colnames(HMD_logmx)) {
 ##################################################################
 # There are 3 D-spline models to test, each with a different
 # set of residuals. The cubic spline model will always be 
-#      log mortality at ages 0..99 = S * theta
+#      [log mortality at ages 0..99] = B * theta
 # where B is a cubic B-spline matrix with lots of knots.
 #
 # Residual measures are
