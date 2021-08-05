@@ -1,0 +1,643 @@
+---
+title: "D-spline estimation for partial or age-grouped data"
+author: "Carl Schmertmann"
+date: "5 Aug 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Purpose
+
+In this document I illustrate how to adapt the D-spline estimation method (from Schmertmann 2021,*D-splines: Estimating rate schedules using
+high-dimensional splines with empirical
+demographic penalties*, http://www.demographic-research.org/Volumes/Vol44/45/
+DOI: 10.4054/DemRes.2021.44.45 ) for cases with partial and/or age-grouped death and exposure data. 
+
+I illustrate with data from Florida counties 2018-2019, downloaded from CDC Wonder (https://wonder.cdc.gov) in June 2021.
+
+
+## Organization
+
+* The first part of this exposition is quite technical and detailed. The published paper assumes that age groups are one year wide, and that we have death and exposure data for all ages. Here I generalize. I derive analytical, closed-form expressions for the gradient vector and Hessian matrix of the D-spline penalized likelihood *when data is for age groups rather than single-year ages, and may not be available for all ages*. These are essential building blocks for finding the set of spline coefficients that best fit the data. 
+
+* The second part of this document contains R code that defines a generalized fitting function that can be used or partial or age-grouped data. 
+
+* The third part presents examples of fits for small-area data from Florida counties. 
+
+## 1. Analytical Expressions for D-spline gradient and Hessian with Grouped Data
+
+#### Notation
+
+As in Schmertmann (2021)
+
+* $\mathbf{B}$ is the $A \times K$ matrix of B-spline constants
+* $\theta \in \mathbb{R}^K$ is the vector of spline coefficients
+* $s = \mathbf{B}\theta$ is the spline function that represents age-specific log mortality rates for single year ages $0\ldots A-1$
+* D-spline residual vectors $\varepsilon(\theta) = \mathbf{AB}\theta-c \in \mathbb{R}^R$  are near zero for "good" spline schedules that conform to HMD patterns
+
+Unlike Schmertmann (2021), suppose that
+
+* deaths and exposure are available for $G$ age groups, which may or may not include all ages $0\ldots A-1$
+* The relationship between the vector of single-year mortality rates $(\mu_0 \ldots \mu_{A-1})^\prime$ and age-group rates $(M_1 \ldots M_G)^\prime$ is 
+$$M = \mathbf{W}\mu ,$$ 
+where $\mathbf{W}$ is a $G \times A$ matrix of weights
+
+* Given exposures by age group $N=(N_1 \ldots N_G)^\prime$, observed deaths $D = (D_1 \ldots D_G)^\prime$ have independent Poisson distributions
+$$
+D_g \sim Pois(N_g\,M_g)
+$$
+* The penalized log-likelihood combines the Poisson likelihood summed over *age groups* with a D-spline penalty that rewards "good" *single-year* schedules $s=\mathbf{B}\theta$
+\begin{equation}
+Q(\theta) = \sum_{g=1}^G \left[ D_g \ln M_g(\theta) - N_g M_g(\theta) \right] - \frac{1}{2} \varepsilon^\prime(\theta) \mathbf{V}^{-1} \varepsilon(\theta)
+\end{equation}
+
+#### Newton-Raphson
+
+The D-spline estimator selects $\theta^\ast$ to maximize the penalized log likelihood. In practice we use Newton-Raphson iteration. For any current value $\theta_t \in \mathbb{R}^K$, we calculate the current $K \times 1$ gradient vector 
+$$
+g_t=g(\theta_t) = \left( \frac{\partial Q}{\partial\theta_1}\ldots\frac{\partial Q}{\partial\theta_K} \right)^\prime
+$$ 
+and $K \times K$ Hessian matrix 
+$$
+H_t = H(\theta_t)\,\,=\,\,\left[\begin{array}{ccc}
+\frac{\partial^2 Q}{\partial\theta_1\partial\theta_1}  & \cdots & 
+\frac{\partial^2 Q}{\partial\theta_1\partial\theta_K}\\
+\vdots  & \ddots & \vdots\\
+\frac{\partial^2 Q}{\partial\theta_K\partial\theta_1}  & \cdots & 
+\frac{\partial^2 Q}{\partial\theta_K\partial\theta_K}
+\end{array}\right]
+$$
+
+and find the next approximation to the optimum $\theta^\ast$ by solving for $\theta_{t+1}$ in the linear system
+$$
+H_t \;\theta_{t+1} = H_t \;\theta_t - g_t
+$$
+
+We then recalculate $g$ and $H$ at the new $\theta_{t+1}$, and repeat until convergence. See the original paper for more details. 
+
+The key point here is that the gradient $g(\theta)$ and Hessian $H(\theta)$ are much more complicated when the input data comes from age groups rather than single-year ages. 
+
+
+#### D-spline gradient with Age Groups
+ 
+Begin with the vector of rates (*not* log rates):
+\begin{align*}
+\mu^{\prime} & =\left[ \begin{array}{ccc}
+\mu_{1} & \cdots & \mu_{A} \end{array}\right]=\left[ \begin{array}{ccc}
+e^{b_{1}^{\prime}\theta} & \cdots & e^{b_{A}^{\prime}\theta} \end{array}\right]
+\end{align*}
+
+and note that the derivatives of these rates with respect to spline coefficients $\theta$ are 
+\[
+\frac{\partial\mu^{\prime}}{\partial\theta}=\left[ \begin{array}{ccc}
+\boldsymbol{b}_{1}\mu_{1} & \cdots & \boldsymbol{b}_{A}\mu_{A} \end{array}\right]=\boldsymbol{B}^{\prime}\text{diag}(\mu)\quad\quad\quad(K\times A)
+\]
+
+
+Age *group* rates and their derivatives are:
+\[
+M=\left[\begin{array}{ccc}
+M_{1} & \cdots & M_{G}\end{array}\right]=\boldsymbol{W}\mu
+\]
+\[
+M^{\prime}=\mu^{\prime}\boldsymbol{W}^{\prime}
+\]
+\[
+\frac{\partial M^{\prime}}{\partial\theta}=\boldsymbol{B}^{\prime}\,\text
+{diag}(\mu)\,\boldsymbol{W}^{\prime}\quad\quad\quad(K\times G)
+\]
+
+Expected deaths by age group and their derivatives are
+
+\[
+\hat{D}^{\prime}=\,\left[\begin{array}{ccc}
+\hat{D}_{1} & \cdots & \hat{D}_{G}\end{array}\right]=\,\left[\begin{array}{ccc}
+N_{1}M_{1} & \cdots & N_{G}M_{G}\end{array}\right]\,=\,M^{\prime}\text{diag}(N)
+\]
+and
+\[
+\frac{\partial\hat{D}{}^{\prime}}{\partial\theta}=\boldsymbol{B}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}\text{diag}(N)\quad\quad\quad(K\times G)
+\]
+
+If we denote the logs of age *group* rates as 
+
+\[
+\lambda^{\prime}\,=\,\left[ \begin{array}{ccc}
+\ln M_{1} & \cdots & \ln M_{G} \end{array}\right]
+\]
+
+
+then its derivatives are 
+
+\begin{align*}
+\frac{\partial\lambda{}^{\prime}}{\partial\theta} & =\,\left[\begin{array}{ccc}
+\frac{1}{M_{1}}\frac{\partial M_{1}}{\partial\theta} & \cdots & \frac{1}{M_{1}}\frac{\partial M_{1}}{\partial\theta}\end{array}\right]\\
+ & =\,\frac{\partial M^{\prime}}{\partial\theta}\,\text{diag}\left(\frac{1}{M}\right)\\
+ & =\,\boldsymbol{B}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}\,\text{diag}\left(\frac{1}{M}\right)
+\end{align*}
+
+
+Penalty residuals and their derivatives are 
+
+\[
+\varepsilon\,=\,\boldsymbol{AB}\theta-c
+\]
+\[
+\frac{\partial\varepsilon^{\prime}}{\partial\theta}\,=\,\boldsymbol{B}^{\prime}\boldsymbol{A}^{\prime}\quad\quad\quad(K\times R)
+\]
+
+
+Using these abbreviations, the penalized Poisson log likelihood is
+
+\[
+Q\,=\,\lambda^{\prime}D-\hat{D}^{\prime}1-\tfrac{1}{2}\varepsilon^{\prime}\boldsymbol{V}^{-1}\varepsilon
+\]
+
+
+and the gradient is therefore the $K \times 1$ vector
+
+\begin{equation}
+g(\theta)\,=\,\frac{\partial Q}{\partial\theta}\,=\,\boldsymbol{B}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}\,\text{diag}\left(\frac{1}{M}\right)D\,-\,\boldsymbol{B}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}N\,-\,\boldsymbol{B}^{\prime}\boldsymbol{A}^{\prime}\boldsymbol{V}^{-1}\varepsilon
+\end{equation}
+
+where the parts that depend on $\theta$ are $\mu$, $M$, and $\varepsilon$. 
+
+#### D-spline Hessian with Age Groups
+
+The Hessian is even more complicated. To 
+derive its form, we'll start with one arbitrary scalar element
+of $g(\theta)$ and differentiate it by an
+arbitrary scalar element of $\theta$. Then we will re-assemble the pieces into a general form for the $K\times K$ Hessian. 
+
+For example, the third element of the gradient vector is the partial derivative of the penalized likelihood function with respect to $\theta_3$:
+\[
+g_{3}=\,\boldsymbol{b_{3}}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}\,\text{diag}\left(\frac{1}{M}\right)D\,-\,\boldsymbol{b_{3}}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}N\,-\,\boldsymbol{b_{3}}^{\prime}\boldsymbol{A}^{\prime}\boldsymbol{V}^{-1}\varepsilon
+\]
+
+where $\mathbf{b}_3 \in \mathbb{R}^A$ is the third column of the B-spline basis matrix $\mathbf{B}$. 
+
+The partial derivative of $g_3$ with respect to, say, $\theta_6$ is
+
+\begin{align}
+\frac{\partial g_{3}}{\partial\theta_{6}} & =\,\boldsymbol{b_{3}}^{\prime}\frac{\partial}{\partial\theta_{6}}\left[\,\text{diag}(\mu)\right]\,\boldsymbol{W}^{\prime}\,\text{diag}\left(\frac{1}{M}\right)D\,\,\label{eq:g63} \\
+ & \quad\quad\quad+\,\,\boldsymbol{b_{3}}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}\,\frac{\partial}{\partial\theta_{6}}\left[\text{diag}\left(\frac{1}{M}\right)\right]D \\
+ & \quad\quad\quad-\,\boldsymbol{b_{3}}^{\prime}\,\frac{\partial}{\partial\theta_{6}}\left[\,\text{diag}(\mu)\right]\,\boldsymbol{W}^{\prime}N\,\nonumber  \\
+ & \quad\quad\quad-\,\boldsymbol{b_{3}}^{\prime}\boldsymbol{A}^{\prime}\boldsymbol{V}^{-1}\boldsymbol{A}\boldsymbol{b}_{6}\nonumber 
+\end{align}
+
+
+There are **two** different diagonal matrices in the equation above that
+vary with $\theta$. Everything else is a known constant. Consider
+the two diagonal matrices one at time. The **first** is 
+\begin{align}
+\frac{\partial}{\partial\theta_{6}} \left[ \,\text{diag}(\mu)\right]\, 
+& =\,\text{diag}\,\left(
+\frac{\partial\mu_{1}}{\partial\theta_{6}}  \cdots   \frac{\partial\mu_{A}}{\partial\theta_{6}} \right) \\
+& =\,\text{diag}\,\left(\boldsymbol{b}_{6}^{\prime}\frac{\partial\mu^{\prime}}{\partial\theta}\right)\\
+ & =\,\text{diag}\,\left(\boldsymbol{b}_{6}^{\prime}\,\text{diag}(\mu)\right)\\
+ & =\,\text{diag}\,\left(\begin{array}{ccc}
+b_{16}\mu_{1} & \cdots & b_{A6}\mu_{A}\end{array}\right)\\
+ & =\,\text{diag}(\boldsymbol{b}_{6})\,\text{diag}(\mu)\quad\quad\quad\quad\quad(A\times A)
+\end{align}
+
+
+The **second** diagonal matrix that varies with
+$\theta$ is 
+\begin{align}
+\frac{\partial}{\partial\theta_{6}}\left[\text{diag}\left(\frac{1}{M}\right)\right]\, 
+
+& =\,\text{diag}\,\left(
+\frac{\partial}{\partial\theta_{6}}\left[\tfrac{1}{M_{1}}\right]  
+\cdots\   
+\frac{\partial}{\partial\theta_{6}}\left[\tfrac{1}{M_{A}}\right]
+\right) \\
+
+& =\,-\text{diag}\,\left(
+M_{1}^{-2}\frac{\partial M_{1}}{\partial\theta_{6}}  \cdots\   M_{G}^{-2}\frac{\partial M_{G}}{\partial\theta_{6}}
+\right)\\
+
+& =\,-\text{diag}\,\left(\boldsymbol{e}_{6}^{\prime}\frac{\partial M^{\prime}}{\partial\theta}\,\right) \text{diag}(M^{-2})\\
+
+& =\,-\text{diag}\,\left(\boldsymbol{b_{6}}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}\right)\,\text{diag}(M^{-2})\\
+
+& =\,-\text{diag}\,\left(\boldsymbol{W}\,\text{diag}(\mu)\,\boldsymbol{b_{6}}\right)\,\text{diag}(M^{-2})\quad\quad\quad\quad\quad(G\times G)
+\end{align}
+
+
+Replacing the two matrices in the $\tfrac{\partial g_3}{\partial \theta_6}$ formula with these new expressions
+that depend on $\boldsymbol{b}_{6}$, we get
+\begin{align}
+\frac{\partial g_{3}}{\partial\theta_{6}} & =\,\boldsymbol{b_{3}}^{\prime}\text{diag}(\boldsymbol{b}_{6})\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}\,\text{diag}\left(\frac{1}{M}\right)D\,\\
+ & \,\quad\quad\quad-\,\boldsymbol{b_{3}}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}diag\,\left[\boldsymbol{W}\,\text{diag}(\mu)\,\boldsymbol{b_{6}}\right]\,\text{diag}(M^{-2})\,D\\
+ & \quad\quad\quad-\,\boldsymbol{b_{3}}^{\prime}\,\text{diag}(\boldsymbol{b}_{6})\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}N\\
+ & \,\quad\quad\quad-\,\boldsymbol{b_{3}}^{\prime}\boldsymbol{A}^{\prime}\boldsymbol{V}^{-1}\boldsymbol{A}\boldsymbol{b}_{6}
+\end{align}
+
+or more compactly
+\[
+\frac{\partial g_{3}}{\partial\theta_{6}}=\,\boldsymbol{b}_{3}^{\prime}\,\boldsymbol{z}_{6}
+\]
+
+where $z_{6}$ is a complicated $A\times1$ vector that depends on
+the 6th column of $\boldsymbol{B}$ as:
+\begin{align*}
+\boldsymbol{z}_{6}\, & =\,\text{diag}(\boldsymbol{b}_{6})\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}\,\text{diag}\left(M^{-1}\right)\left(D-\hat{D}\right)\\
+ & \quad\quad\quad-\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}diag\,\left(\boldsymbol{W}\,\text{diag}(\mu)\,\boldsymbol{b_{6}}\right)\,\text{diag}(M^{-2})\,D\\
+ & \quad\quad\quad-\boldsymbol{A}^{\prime}\boldsymbol{V}^{-1}\boldsymbol{A}\boldsymbol{b}_{6}
+\end{align*}
+Generalizing from this (3,6) element, we get the full (and, admittedly, quite complicated) analytical form of the Hessian matrix
+\begin{equation}
+H(\theta)\,\,=\,\,\left[\begin{array}{cccc}
+\boldsymbol{b}_{1}^{\prime}\boldsymbol{z}_{1} & \boldsymbol{b}_{1}^{\prime}\boldsymbol{z}_{2} & \cdots & \boldsymbol{b}_{1}^{\prime}\boldsymbol{z}_{K}\\
+\boldsymbol{b}_{2}^{\prime}\boldsymbol{z}_{1} & \boldsymbol{b}_{2}^{\prime}\boldsymbol{z}_{2} & \cdots & \boldsymbol{b}_{2}^{\prime}\boldsymbol{z}_{K}\\
+\vdots & \vdots & \ddots & \vdots\\
+\boldsymbol{b}_{K}^{\prime}\boldsymbol{z}_{1} & \boldsymbol{b}_{K}^{\prime}\boldsymbol{z}_{2} & \cdots & \boldsymbol{b}_{K}^{\prime}\boldsymbol{z}_{K}
+\end{array}\right]\,\,=\,\,\boldsymbol{B}^{\prime}\left[\begin{array}{ccc}
+z_{1} & \cdots & z_{k}\end{array}\right]\,\,=\,\,\boldsymbol{B}^{\prime}\boldsymbol{Z}
+\end{equation}
+
+which is symmetric.
+
+**In the special case of single-year age groups**, as in the Appendix of Schmertmann (2021), $\boldsymbol{W}=\boldsymbol{I}$
+and $\boldsymbol{M}=\boldsymbol{\mu}$, so that $z_{k}$ simplifies
+to 
+\[
+z_{k}\,=\,-\text{diag}(b_{k})\,\hat{D}\,-\,\boldsymbol{A}^{\prime}\boldsymbol{V}^{-1}\boldsymbol{A}b_{k}
+\]
+and the $(i,j)$ element of the Hessian matrix is 
+\[
+H_{ij}(\theta)\,=\,-\left[b_{i}^{\prime}\,\diamond b_{j}^{\prime}\right]\,\hat{D}\,-b_{i}^{\prime}\,\boldsymbol{A}^{\prime}\boldsymbol{V}^{-1}\boldsymbol{A}b_{j}\quad\quad\quad\quad\quad i,j\in\{1...K\}
+\]
+where $\diamond$ indicates element-by-element multiplication. Over
+all $(i,j)$ this is
+\[
+H(\theta)\,\,=\,\,\boldsymbol{-B}^{\prime}\text{diag}(\hat{D})\boldsymbol{B}\,-\,\boldsymbol{B}^{\prime}\boldsymbol{A}^{\prime}\boldsymbol{V}^{-1}\boldsymbol{A}\boldsymbol{B}
+\]
+
+## 2. An R function to maximize the penalized likelihood, given age-group deaths and exposure
+
+The following function implements Newton-Raphson search using the gradient and Hessian derived above. The key difference between this function and earlier vintages are the 3rd and 4th arguments, which define the lower and upper bounds for age *groups*, and the new generalized formulas for the gradient and the Hessian.
+
+Notice that the default settings are for 100 single-year age groups, with lower bounds of 0,1,...,99 and upper bounds of 1,2,...,100 -- i.e, [0,1), [1,2), ... [99,100). 
+
+```{r fitting-function}
+
+library('splines')
+ 
+Dspline_fit = function(N, D,
+                       age_group_lower_bounds = 0:99,
+                       age_group_upper_bounds = 1:100,
+                       Amatrix, cvector, SIGMA.INV,
+                       knots          = seq(from=3,to=96,by=3),   
+                       max_iter       = 20,
+                       theta_tol      = .00005,
+                       details        = FALSE) {
+  
+  require(splines)
+  
+  # cubic spline basis
+  B    = bs(0:99, knots=knots, degree=3, intercept=TRUE)
+
+  # number of spline parameters
+  K = ncol(B)  
+  
+  ## number and width of age groups
+  age_group_labels = paste0('[',age_group_lower_bounds,',',age_group_upper_bounds,')')
+  
+  G     = length(age_group_lower_bounds)   
+  nages = age_group_upper_bounds - age_group_lower_bounds
+  
+  ## weighting matrix for mortality rates (assumes uniform
+  ## distribution of single-year ages within groups)
+  W = outer(seq(G), 0:99, function(g,x){ 1*(x >= age_group_lower_bounds[g])*
+      (x <  age_group_upper_bounds[g])}) %>% 
+    prop.table(margin=1)
+  
+  dimnames(W) = list(age_group_labels , 0:99)
+  ## penalized log lik function
+  pen_log_lik = function(theta) {
+    
+    lambda.hat = as.numeric( B %*% theta)
+    eps        = Amatrix %*% lambda.hat - cvector 
+    penalty    = 1/2 * t(eps) %*% SIGMA.INV %*% eps
+    
+    M    = W %*% exp(B %*% theta)   # mortality rates by group
+    logL = sum(D * log(M) - N * M)
+    return(logL  - penalty)
+  }
+  
+  ## expected deaths function
+  Dhat = function(theta) {
+    M    = W %*% exp(B %*% theta)   # mortality rates by group
+    return(  as.numeric( N * M ))
+  }      
+  
+  ## gradient function (1st deriv of pen_log_lik wrt theta) 
+  gradient = function(theta) {
+    lambda.hat = as.numeric( B %*% theta)
+    eps        = Amatrix %*% lambda.hat - cvector
+    
+    mx    = exp(lambda.hat)
+    Mg    = as.numeric(W %*% mx)
+    X     = W %*% diag(mx) %*% B
+    return( t(X) %*% diag(1/Mg) %*% (D-Dhat(theta)) - 
+              t(B) %*% t(Amatrix) %*% SIGMA.INV %*% eps )
+  }
+  
+
+  hessian = function(theta) {
+    
+    mu     = as.vector( exp(B %*% theta)) 
+    M      = as.vector( W %*% mu) 
+    
+    Dhat = N * M
+    
+    construct_zvec = function(k) {
+      part1 = diag(B[,k]) %*% diag(mu) %*% t(W) %*% diag(1/M) %*% (D - Dhat)
+      part2 = diag(mu) %*% t(W) %*% diag(as.vector(W %*% diag(mu) %*% B[,k])) %*% diag(1/(M^2)) %*% D
+      part3 = t(Amatrix) %*% SIGMA.INV %*% Amatrix %*% B[,k]
+      
+      return(part1 - part2 - part3)
+    }
+    
+    Z = sapply(1:K, construct_zvec)
+    
+    H = t(B) %*% Z
+    
+    # slight clean-up to guarantee total symmetry
+    return( (H + t(H))/2 )
+  } # hessian
+    
+  #------------------------------------------------
+  # iteration function: 
+  # next theta vector as a function of current theta
+  #------------------------------------------------
+
+ next_theta = function(theta) {
+   H = hessian(theta)
+   return( as.vector( solve( H, H %*% theta - gradient(theta) )))
+ }
+
+  ## main iteration:     
+  th = rep( log(sum(D)/sum(N)), K)  #initialize at overall avg log rate
+  niter = 0
+  
+  repeat {
+    
+    niter      = niter + 1
+    last_param = th
+    th         = next_theta( th )  # update
+    change     = th - last_param
+    
+    converge = all( abs(change) < theta_tol)
+    overrun  = (niter == max_iter)
+    
+    if (converge | overrun) { break }
+    
+  } # repeat
+  
+  if (details | !converge | overrun) {
+    if (!converge) print('did not converge')
+    if (overrun) print('exceeded maximum number of iterations')
+    
+    dhat = Dhat(th)
+    H    = hessian(th)
+    g    = gradient(th)
+    
+    BWB   = t(B) %*% t(W) %*% diag(dhat) %*% W %*% B
+    BAVAB = t(B) %*% t(Amatrix) %*% SIGMA.INV %*% Amatrix %*% B
+    df    = sum( diag( solve(BWB+BAVAB) %*% BWB)) # trace of d[Dhat]/d[D'] matrix
+    
+    lambda.hat = B %*% th
+    
+    dev = 2 * sum( (D>0) * D * log(D/dhat), na.rm=TRUE)
+      
+    return( list( N                = N,
+                  D                = D,
+                  
+                  age_group_lower_bounds = age_group_lower_bounds,
+                  age_group_upper_bounds = age_group_upper_bounds,
+                  
+                  B                = B,
+                  theta            = as.vector(th), 
+                  lambda.hat       = as.vector(lambda.hat),
+                  gradient         = as.vector(g),
+                  dev              = dev,
+                  df               = df,
+                  bic              = dev + df * log(length(D)),
+                  aic              = dev + 2*df,
+                  fitted.values    = as.vector(dhat),
+                  obs.values       = D,
+                  obs.expos        = N,
+                  hessian          = H,
+                  covar            = solve(-H), 
+                  pen_log_lik      = pen_log_lik(th),
+                  niter            = niter,
+                  converge         = converge, 
+                  maxiter          = overrun))
+  } else return( th ) 
+  
+} # Dspline_fit
+
+
+```
+
+## 3. Examples
+
+Here I use three examples with CDC age-group data from Florida counties for 2018-2019. Many counties are small enough that CDC intentionally supresses death counts for some age groups. 
+
+```{r load-constants-and-data}
+
+library(tidyverse)
+
+# load the Dspline constants, structured as 
+# List of 3
+#  $ Female:List of 3
+#   ..$ D-1 :List of 3
+#   ..$ D-2 :List of 3
+#   ..$ D-LC:List of 5
+#  $ Male  :List of 3
+#   ..$ D-1 :List of 3
+#   ..$ D-2 :List of 3
+#   ..$ D-LC:List of 5
+#  $ Total :List of 3
+#   ..$ D-1 :List of 3
+#   ..$ D-2 :List of 3
+#   ..$ D-LC:List of 5
+#
+# each of the three main components has subcomponents 
+# A, c, SIGMA.INV for the  D-1 and D-2 models
+# and A, c, SIGMA.INV, LCa, LCb for the D-LC model
+
+load(url('http://bonecave.schmert.net/general_Dspline_constants.RData'))
+
+# read FL county data and display a small chunk
+FL = read.delim(file=url('http://bonecave.schmert.net/Underlying Cause of Death, 2018-2019, Single Race.txt'),
+               header=TRUE, sep="\t",
+               na.strings = c('Not Applicable','Unreliable','Suppressed')) %>% 
+  mutate(County = str_replace(County,' County, FL', ''))           
+
+
+# there are 21 age groups in the CDC data 
+age_group_info = tibble(
+  Five.Year.Age.Groups = 
+    c("< 1 year", "1-4 years", "5-9 years", "10-14 years", "15-19 years", 
+    "20-24 years", "25-29 years", "30-34 years", "35-39 years", "40-44 years", 
+    "45-49 years", "50-54 years", "55-59 years", "60-64 years ", 
+    "65-69 years", "70-74 years", "75-79 years", "80-84 years", "85-89 years", 
+    "90-94 years", "95-99 years"),
+  L = c(0,1,seq(from=5,to=95,by=5)),
+  H = c(1, seq(from=5, to=100, by=5))
+)
+
+FL = inner_join(FL, age_group_info, by='Five.Year.Age.Groups') %>% 
+      select(County, Gender.Code, Five.Year.Age.Groups, Deaths, Population, L, H)
+
+
+```
+
+A quick look at the first several observations shows how small death counts are surpressed: the number of deaths is not reported for anyone age 1-4 or 5-9 in Alachua County because those numbers were too small. 
+
+```{r}
+
+head(FL, 16)
+
+```
+
+### Fitting for grouped data: Alachua County FL
+
+Now we'll fit D-spline models for Alachua County males (Although I no longer live there, I was born at Alachua General Hospital in 1959!). 
+
+
+```{r}
+# get the Alachua male data for the subset of age groups that have both death and population counts
+
+df = FL %>% 
+      filter(County=='Alachua', Gender.Code=='M', 
+             is.finite(Deaths), is.finite(Population)) %>% 
+      mutate(logM = log(Deaths/Population))
+      
+print(df)      
+```
+
+Notice that only `r nrow(df)` of `r nrow(age_group_info)` age groups have published data. Also notice that each group has a lower age bound $L$ and and upper bound $H$.
+
+Let's fit a D-LC (Lee-Carter Dspline) model to the available Alachua age group data, and then plot some of the results. We'll do this through a reusable function for which we can change several parameters. 
+```{r}
+
+make_example = function(this_county, this_gender_code, this_method) {
+
+  this_sex = c('F'='Female', 'M'='Male')[this_gender_code]
+  this_hue =   this_hue = c('D-1'='darkgreen', 
+                            'D-2'='blue', 
+                            'D-LC'='brown')[this_method]
+
+  df = FL %>% 
+      filter(County==this_county, Gender.Code==this_gender_code, 
+             is.finite(Deaths), is.finite(Population)) %>% 
+      mutate(logM = log(Deaths/Population))
+  
+  print(df)
+    
+  this_N      = df$Population
+  this_D      = df$Deaths
+
+  fit = Dspline_fit(N=df$Population, D=df$Deaths, 
+            age_group_lower_bounds = df$L,
+            age_group_upper_bounds = df$H,
+            Amatrix   = Dspline_constants[[this_sex]][[this_method]]$A,
+            cvector   = Dspline_constants[[this_sex]][[this_method]]$c,
+            SIGMA.INV = Dspline_constants[[this_sex]][[this_method]]$SIGMA.INV,
+            max_iter  = 50,
+            details=TRUE)
+
+  # first illustrate the fitted log mortality rates (and uncertainty)
+    G = ggplot() +
+       geom_line(aes(x=0:99, y=fit$lambda.hat), 
+                 lwd=1.2, color=this_hue) +
+       theme_bw() +
+       scale_x_continuous(breaks=seq(0,100,10), minor_breaks = seq(0,100,5)) +
+       scale_y_continuous(limits=c(-10,0),
+                          breaks=log(c(.0001,.0002, .0010,.0020, .0100,.0200,.1000,.2000,1)),
+                          minor_breaks = NULL,
+                          labels = c('1','2', '10','20', '100','200','1000','2000','10000')) +
+       labs(x='Age',y='Deaths per 10000 (log scale)') +
+       geom_text(aes(x=2, y=log(.30)), 
+                 label=paste0('df= ',round(fit$df,1)),
+                 hjust=0, size=6)
+  
+  
+  G = G + 
+      geom_segment(data=df, aes(x=L, y=logM, xend=H, yend=logM),
+                   size=1.5)
+  
+  
+  mx = exp(fit$lambda.hat)
+  px = exp(-mx)
+  lx = c(1, cumprod(px))
+  e0 = sum( tail(lx,-1) + head(lx,-1)) /2 + 
+        tail(lx,1) * 1/(tail(mx,1))
+  
+  
+  se = (fit$B %*% fit$covar %*% t(fit$B)) %>% diag() %>% sqrt()
+  
+  G = G + geom_ribbon(aes(x=0:99, ymin=fit$lambda.hat-1.28*se, ymax=fit$lambda.hat+1.28*se),
+                  fill=this_hue, alpha=.25) +
+       labs(title=paste0(paste0(this_method,' fit for ',this_county,' County FL ',this_sex,'s, e0=', round(e0,1))))
+  
+  print(G)
+  
+  
+  # next illustrate estimated life expectancy (and uncertainty)
+  # simulate 10000 draws of the spline coefficient vector, 
+  # using a multivariate normal approx
+  B         = fit$B
+  CH        = t(chol(fit$covar))
+  theta.sim = fit$theta + CH %*% matrix(rnorm(10000*ncol(CH)),nrow=ncol(CH))
+  
+  lambda.sim = B %*% theta.sim
+
+  # function to convert log mortality rates into e0  
+  e0 = function(lambda) {
+    mx = exp(lambda)
+    px = exp(-mx)
+    lx = cumprod( c(1,px))
+    
+    life.exp = sum((head(lx,-1) + tail(lx,-1))/2) +
+      tail(lx,1)/tail(mx,1)
+  }
+  
+  e = apply(lambda.sim, 2, e0)
+  
+  plot(density(e, adjust=1.5),lwd=3,
+       xlab='e0', ylab='density',
+       main=paste0('Life Expectancy: ',this_county,' ',this_sex,'s (', this_method, ' model)'),
+       col=this_hue)
+  abline(v=median(e),lty='dotted',lwd=3)
+
+
+}
+
+make_example('Alachua', 'M', 'D-LC')
+```
+
+### Fitting for grouped data: Broward County FL
+
+Now we'll fit a D-1 model for females in Broward County, which is one of Florida's **most** populous.
+
+
+```{r}
+make_example('Broward','F','D-1')
+```
+
+### Fitting for grouped data: Liberty FL
+
+Last we'll fit a D-LC model for males in Liberty County, which is one of Florida's **least** populous.
+
+
+```{r}
+make_example('Liberty','M','D-LC')
+```
