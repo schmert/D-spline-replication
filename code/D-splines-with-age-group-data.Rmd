@@ -2,7 +2,9 @@
 title: "D-spline estimation for partial or age-grouped data"
 author: "Carl Schmertmann"
 date: "5 Aug 2021"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -182,10 +184,20 @@ where $\mathbf{b}_3 \in \mathbb{R}^A$ is the third column of the B-spline basis 
 The partial derivative of $g_3$ with respect to, say, $\theta_6$ is
 
 \begin{align}
-\frac{\partial g_{3}}{\partial\theta_{6}} & =\,\boldsymbol{b_{3}}^{\prime}\frac{\partial}{\partial\theta_{6}}\left[\,\text{diag}(\mu)\right]\,\boldsymbol{W}^{\prime}\,\text{diag}\left(\frac{1}{M}\right)D\,\,\label{eq:g63} \\
- & \quad\quad\quad+\,\,\boldsymbol{b_{3}}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}\,\frac{\partial}{\partial\theta_{6}}\left[\text{diag}\left(\frac{1}{M}\right)\right]D \\
- & \quad\quad\quad-\,\boldsymbol{b_{3}}^{\prime}\,\frac{\partial}{\partial\theta_{6}}\left[\,\text{diag}(\mu)\right]\,\boldsymbol{W}^{\prime}N\,\nonumber  \\
- & \quad\quad\quad-\,\boldsymbol{b_{3}}^{\prime}\boldsymbol{A}^{\prime}\boldsymbol{V}^{-1}\boldsymbol{A}\boldsymbol{b}_{6}\nonumber 
+  \frac{\partial g_{3}}{\partial\theta_{6}} 
+  & =\,
+\boldsymbol{b_{3}}^{\prime} \frac{\partial}{\partial\theta_{6}}
+\left[\,\text{diag}(\mu)\right]\,
+\boldsymbol{W}^{\prime}\,\text{diag}\left(\frac{1}{M}\right)D\,\, \\
+ & \quad\quad\quad+\,\,
+ \boldsymbol{b_{3}}^{\prime}\,
+ \text{diag}(\mu)\,\boldsymbol{W}^{\prime}\,\frac{\partial}{\partial\theta_{6}}
+ \left[\text{diag}\left(\frac{1}{M}\right)\right]D \\
+ & \quad\quad\quad-\,
+ \boldsymbol{b_{3}}^{\prime}\,\frac{\partial}{\partial\theta_{6}}
+ \left[\,\text{diag}(\mu)\right]\,
+ \boldsymbol{W}^{\prime}N\,  \\
+ & \quad\quad\quad-\,\boldsymbol{b_{3}}^{\prime}\boldsymbol{A}^{\prime}\boldsymbol{V}^{-1}\boldsymbol{A}\boldsymbol{b}_{6}
 \end{align}
 
 
@@ -208,21 +220,16 @@ The **second** diagonal matrix that varies with
 $\theta$ is 
 \begin{align}
 \frac{\partial}{\partial\theta_{6}}\left[\text{diag}\left(\frac{1}{M}\right)\right]\, 
-
 & =\,\text{diag}\,\left(
 \frac{\partial}{\partial\theta_{6}}\left[\tfrac{1}{M_{1}}\right]  
 \cdots\   
 \frac{\partial}{\partial\theta_{6}}\left[\tfrac{1}{M_{A}}\right]
 \right) \\
-
 & =\,-\text{diag}\,\left(
 M_{1}^{-2}\frac{\partial M_{1}}{\partial\theta_{6}}  \cdots\   M_{G}^{-2}\frac{\partial M_{G}}{\partial\theta_{6}}
 \right)\\
-
 & =\,-\text{diag}\,\left(\boldsymbol{e}_{6}^{\prime}\frac{\partial M^{\prime}}{\partial\theta}\,\right) \text{diag}(M^{-2})\\
-
 & =\,-\text{diag}\,\left(\boldsymbol{b_{6}}^{\prime}\,\text{diag}(\mu)\,\boldsymbol{W}^{\prime}\right)\,\text{diag}(M^{-2})\\
-
 & =\,-\text{diag}\,\left(\boldsymbol{W}\,\text{diag}(\mu)\,\boldsymbol{b_{6}}\right)\,\text{diag}(M^{-2})\quad\quad\quad\quad\quad(G\times G)
 \end{align}
 
